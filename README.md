@@ -1,135 +1,79 @@
-# Systèmes asservis sous MATLAB / Simulink
+# Control Systems — MATLAB and Simulink
 
-Trois TP de commande : le pilote automatique de vitesse d'un train (régulateur proportionnel avec saturation et perturbation), la puissance d'une centrale thermique (réponse inverse, analyse fréquentielle, régulateur P puis PI continu et discret) et un régulateur programmé échantillonné soumis à différentes perturbations.
+Three engineering laboratories connecting dynamic modelling, feedback design and sampled-data implementation: train-speed control, thermal-power regulation and a programmed controller under disturbances.
 
-![Simulateur Simulink du train avec son régulateur](assets/simulateur_regulateur.png)
+![Train-control simulator](assets/simulateur_regulateur.png)
 
-## Vue d'ensemble
+Academic work developed with Sarah Dahmoun in the Instrumentation engineering programme at Sup Galilée, Université Sorbonne Paris Nord.
 
-- **Cadre** : TP de systèmes asservis, cycle ingénieur Instrumentation, Sup Galilée (Université Sorbonne Paris Nord), septembre–novembre 2024.
-- **Équipe** : binôme avec Sarah Dahmoun.
-- **État** : TP terminés. Les comptes rendus sont des versions de travail ; pas de compte rendu retrouvé pour le TP 3.
+## Model portfolio
 
-## Objectifs
+| Module | Main concepts | Location |
+|---|---|---|
+| Train-speed control | First-order dynamics, proportional feedback, precompensation and actuator saturation | [Train models](models/tp1_suite_pilote_automatique/) |
+| Thermal-power regulation | Inverse response, frequency analysis, proportional and PI control | [Thermal models](models/tp2_centrale_thermique/) |
+| Programmed sampled controller | Sampling, calculated/applied command and disturbance rejection | [Programmed controller](models/tp3_regulation_programmee/) |
 
-1. Construire un simulateur Simulink à partir d'un modèle mathématique.
-2. Fermer la boucle avec un régulateur proportionnel, puis vérifier un cahier des charges (erreur, saturation, perturbation).
-3. Relier la réponse temporelle et la réponse fréquentielle d'un système.
-4. Régler un régulateur PI, puis le discrétiser.
-5. Étudier un régulateur programmé échantillonné face à des perturbations constantes, sinusoïdales et aléatoires.
+Reports are in [`docs/`](docs/); diagram and response captures are in [`assets/`](assets/).
 
-## Architecture du système
+## Train model
 
-**TP 1 — pilote automatique d'un train**
+The first-order plant uses a gain `beta = 4` in the report and a time constant `tau`. A 100 km/h reference is compared with measured speed, and proportional gain/precompensation drive a command limited to −50…100. Speed is integrated after unit conversion to obtain travelled distance.
 
-```mermaid
-flowchart LR
- YR[Consigne yr = 100 km/h] --> S1((+/-))
- S1 --> K[Gain k] --> A[Gain alpha] --> SAT[Saturation<br/>-50 / 100]
- SAT --> S2((+))
- W[Perturbation w] --> S2
- S2 --> B[Gain beta] --> F["1 / (τ p + 1)"] --> Y[Vitesse y]
- Y --> S1
- Y --> C[1/60] --> I[Intégrateur] --> D[Distance d]
+The model supports comparison of open-loop response, feedback tracking and command saturation. Convergence statements apply to the documented runs and assumptions; they are not guarantees for arbitrary gain values or actuator limits.
+
+## Thermal model and PI control
+
+The supplied model is:
+
+```text
+d + 60 d' = u
+x + 120 x' = 2 d
+y = 2 (x - d) - w
 ```
 
-**TP 2 — centrale thermique**
+Here `u` is the fuel-flow command and `w` the disturbance. The output initially moves in the opposite direction to its steady-state response. Feedback sign must therefore be checked against the error definition used in the model.
 
-Modèle donné par l'énoncé : `d + 60 ḋ = u`, `x + 120 ẋ = 2 d`, `y = 2 (x − d) − w`, avec `u` la commande du débit de combustible, `d` le débit, `x` le flux thermique, `y` la puissance électrique et `w` une perturbation.
+The archived PI parameters are `k = 0.285`, `Ti = 100 s` and discrete period `Te = 0.01 s`. The material compares continuous and discrete integration, steady-state error and disturbance rejection.
 
-Régulateur PI : `u = −k (e + (1/Ti) ∫ e dt)`, consigne `yr = 50`.
+## Reported simulation observations
 
-![Schéma en boucle fermée](assets/tp2_schema_boucle_fermee.png)
-
-**TP 3 — régulateur programmé échantillonné**
-
-![Régulateur programmé](assets/tp3_regulateur_programme.png)
-
-## Logiciel
-
-MATLAB / Simulink : blocs Step, Constant, Gain, Sum, Transfer Fcn, Integrator, Discrete-Time Integrator, Zero-Order Hold, Saturation, Sine Wave, Random Number, Uniform Random Number, MATLAB Function, Scope ; fonctions `tf` et LTI Viewer pour les lieux de Bode, Nyquist et Black.
-
-## Implémentation
-
-| Modèle | Contenu |
+| Case | Archived observation |
 |---|---|
-| `models/pilote_train_boucle_ouverte.slx` | Fonction de transfert `1/(to·p + 1)`, gains `beta`, `k`, `alpha` et `1/60`, saturation de la commande entre −50 et 100, consigne de 100, perturbation en échelon, intégrateur pour la distance |
-| `models/pilote_train_boucle_ouverte_corrige.slx` | Version corrigée du même modèle (différences non documentées) |
-| `models/tp1_suite_pilote_automatique/` | Suite du TP 1 : `pilote_automatique.slx`, `pilote_automatique_complet.slx`, `pilote_automatique_question_4.slx`, `parametres_tp1.m` |
-| `models/tp2_centrale_thermique/` | `boucle_ouverte.slx`, `boucle_fermee.slx`, `boucle_fermee_pi.slx`, `regulateur_pi_discret.slx`, `parametres_tp2.m` (`k = 0.285`, `Ti = 100`, `Te = 0.01`) |
-| `models/tp3_regulation_programmee/` | `tp3_schema.slx`, `parametres_tp3.m` : deux réglages commentés selon le temps de réponse visé (`t5 = 5 s` : `k1 = 9/(10π)`, `k2 = 2/10` ; `t5 = 2 s` : `k1 = 56.25/(10π)`, `k2 = 1/2`), `f = 0.001` Hz, `Te = 0.02` s (fe = 50 Hz) |
+| Thermal step `u = 25` | Initial decrease near −17, followed by a final output of 50 |
+| Proportional gain `k = 0.5` | Convergent response |
+| Proportional gain `k = 0.75` | Oscillatory response |
+| Proportional gain `k = 1` | Divergent response |
+| PI with `w = 50` | Reported return toward `y = 50`, with steady command near 50 |
+| Programmed controller | Captures compare target settling times and constant, sinusoidal and random disturbances |
 
-Pour le TP 1, le compte rendu donne `β = 4`.
+These values come from the original reports and captures. Simulations have not been rerun for this README update.
 
-## Principes d'ingénierie
+## Reproducing a model
 
-- **Premier ordre** : `F(p) = β / (τ p + 1)`, stable car le pôle `−1/τ` est négatif ; gain statique `F(0) = β`.
-- **Régulateur proportionnel** avec précompensation `α` pour un gain statique unitaire en boucle fermée.
-- **Saturation de la commande** : comparaison entre commande calculée et commande appliquée.
-- **Système à réponse inverse** (TP 2) : la puissance commence par diminuer avant de rejoindre sa valeur finale.
-- **Stabilité en boucle fermée selon le gain** (TP 2) : convergence, oscillations puis divergence quand `k` augmente.
-- **Action intégrale** : annulation de l'erreur statique, y compris en présence de perturbation.
-- **Discrétisation** : bloqueur d'ordre zéro, intégrateur discret, influence de la période d'échantillonnage.
-
-## Résultats
-
-Valeurs relevées dans les comptes rendus (TP 1 et 2) et dans les titres des captures (TP 3) :
-
-| TP | Essai | Résultat |
-|---|---|---|
-| 1 | Boucle ouverte, `u = 15` pendant 10 s | Vitesse qui tend vers 60 km/h (`β × u`) |
-| 1 | Boucle fermée, `yr = 100 km/h` | La vitesse converge vers 100 km/h quel que soit `k` |
-| 1 | Cahier des charges | Respecté tant que `k` ne dépasse pas 20 |
-| 2 | Échelon `u = 25` | Puissance qui descend d'abord jusqu'à −17 puis se stabilise à 50 |
-| 2 | Temps de réponse | 530 s à 5 %, 445 s à 10 %, 355 s à 20 % |
-| 2 | Sinusoïde de période 10 s | Amplitude ≈ 0,05 pour `ε = 1`, déphasage mesuré 92° pour 93° attendus |
-| 2 | Régulateur P | Converge pour `k = 0.5`, oscille pour `k = 0.75`, diverge pour `k = 1` |
-| 2 | PI `k = 0.285`, `Ti = 100` | 1220 s pour atteindre la bande de 10 % (y = 55) ; commande avec un pic ≈ 45 puis stabilisée à 25 |
-| 2 | PI avec perturbation `w = 50` | `y → 50`, `u → 50`, erreur `e → 0` |
-| 2 | PI discret (`Te = 0.01`) | La sortie converge vers 50 |
-| 3 | Réglages `t5 = 5 s` et `t5 = 2 s` | Captures de `y(t)` et `u(t)` |
-| 3 | Perturbation `v(t)` constante (5), sinusoïdale, aléatoire puis uniforme | Captures de `y(t)` et `u(t)` |
-| 3 | Commande calculée / commande appliquée | Oscillation de `y(t)` attribuée au dépassement de la commande |
-| 3 | `Te = 0.05` s, ajout d'une seconde entrée `z(t)` | Captures |
-
-| P, k = 0,5 | P, k = 0,75 | P, k = 1 |
-|---|---|---|
-| ![](assets/tp2_sortie_k0_5_converge.png) | ![](assets/tp2_sortie_k0_75_oscillations.png) | ![](assets/tp2_sortie_k1_diverge.png) |
-
-| PI continu | Schéma PI discret | PI discret |
-|---|---|---|
-| ![](assets/tp2_pi_k0_285_ti100.png) | ![](assets/tp2_schema_pi_discret.png) | ![](assets/tp2_pi_discret_sortie_y.png) |
-
-| TP 3 — perturbation aléatoire | TP 3 — dépassement de commande |
-|---|---|
-| ![](assets/tp3_y_u_bruit_uniforme.png) | ![](assets/tp3_oscillation_depassement_commande.png) |
-
-## Difficultés et limites
-
-- Comptes rendus non relus : fautes de frappe, et une question laissée sans réponse (valeur finale de la distance au TP 1).
-- La seconde mesure fréquentielle du TP 2 (période 100π s) n'est pas faite.
-- TP 3 : pas de compte rendu ; l'interprétation se limite aux titres des captures. Le rôle exact de `z(t)` est **à documenter**.
-- Simulations non rejouées lors de la rédaction de ce README.
-
-## Structure du dépôt
-
-```
-models/   Modèles Simulink (TP 1, TP 1 suite, TP 2, TP 3) et scripts de paramètres
-assets/   Captures des schémas et des courbes (préfixes tp2_ et tp3_)
-docs/     Comptes rendus (TP 1 .docx, TP 2 PDF, TP 2 régulateur PI .docx)
+```bash
+git clone https://github.com/tedjelmoulksn-dotcom/Systemes_Asservis.git
+cd Systemes_Asservis
 ```
 
-## Exécution
+In MATLAB, change to the chosen model directory, run its parameter script, then open the corresponding `.slx` model. For example:
 
-Dans MATLAB : lancer le script de paramètres du TP (`parametres_tp1.m`, `parametres_tp2.m` ou `parametres_tp3.m`), ouvrir le modèle `.slx` correspondant, lancer la simulation et ouvrir les Scopes.
+```matlab
+cd models/tp2_centrale_thermique
+run('parametres_tp2.m')
+open_system('boucle_fermee_pi.slx')
+```
 
-## Compétences démontrées
+MATLAB and Simulink are required; transfer-function and frequency-analysis workflows also use Control System Toolbox. Check the model's solver, stop time and workspace variables before simulation.
 
-- Modélisation par fonction de transfert et schéma-bloc.
-- Simulation Simulink : saturation, perturbations (constante, sinusoïdale, aléatoire), régulateurs P, PI et programmé.
-- Analyse temporelle et fréquentielle (Bode, Nyquist, Black), stabilité selon le gain.
-- Discrétisation d'un correcteur et choix de la période d'échantillonnage.
+For TP3, select and activate the intended gain values in the parameter script: alternative settings are commented. The stored sampling period is 0.02 s.
+
+## Engineering review
+
+Interpret output tracking together with actuator saturation and applied command. Check sampled-data behaviour across sampling periods, and distinguish simulated disturbances from measured physical inputs.
+
+The TP3 archive has no recovered narrative report; the additional `z(t)` signal requires fuller documentation. Original reports remain working documents.
 
 ## Licence
 
-Aucune licence n'a été définie.
+No project-wide licence has been defined.
