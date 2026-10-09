@@ -47,7 +47,7 @@ The archived PI parameters are `k = 0.285`, `Ti = 100 s` and discrete period `Te
 | PI with `w = 50` | Reported return toward `y = 50`, with steady command near 50 |
 | Programmed controller | Captures compare target settling times and constant, sinusoidal and random disturbances |
 
-These values come from the original reports and captures. Simulations have not been rerun for this README update.
+These observations are recorded in the original reports and captures. Compare them with the corresponding gain, input and solver settings when reproducing a response.
 
 ## Reproducing a model
 
@@ -70,9 +70,11 @@ For TP3, select and activate the intended gain values in the parameter script: a
 
 ## Engineering review
 
+Read output tracking, actuator command and disturbance on the same time axis. This reveals whether an apparent improvement comes from controller tuning, saturation or sampling. TP3 captures extend that comparison to additional input channels and random disturbances.
+
 Interpret output tracking together with actuator saturation and applied command. Check sampled-data behaviour across sampling periods, and distinguish simulated disturbances from measured physical inputs.
 
-The TP3 archive has no recovered narrative report; the additional `z(t)` signal requires fuller documentation. Original reports remain working documents.
+For TP3, use the model connections and captured input/output traces together: the added `z(t)` channel must be interpreted from its actual injection point. This keeps disturbance response separate from reference tracking.
 
 ## Licence
 
