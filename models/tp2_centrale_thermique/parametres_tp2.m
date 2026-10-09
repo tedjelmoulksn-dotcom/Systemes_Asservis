@@ -2,7 +2,7 @@
 %ltiview(f)
 epsilon=0.1;
 omega=0.02;
-f=omega/2*pi;
+f=omega/(2*pi); % Convert angular frequency (rad/s) to frequency (Hz).
 k=0.285;
 alpha=1+1/(2*k);
 g=(240*k/(1+2*k))*(1+(60/(180-240*k)))
