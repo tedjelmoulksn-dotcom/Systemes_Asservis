@@ -1,6 +1,6 @@
 # Control Systems — MATLAB and Simulink
 
-Three engineering laboratories connecting dynamic modelling, feedback design and sampled-data implementation: train-speed control, thermal-power regulation and a programmed controller under disturbances.
+MATLAB/Simulink studies of feedback control, PI regulation and sampled-data systems.
 
 ![Train-control simulator](assets/simulateur_regulateur.png)
 
