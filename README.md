@@ -1,249 +1,135 @@
-# Control Systems — MATLAB and Simulink
+# Systèmes asservis sous MATLAB / Simulink
 
-MATLAB/Simulink studies of train-speed control, thermal-power regulation and torpedo depth control.
+Trois TP de commande : le pilote automatique de vitesse d'un train (régulateur proportionnel avec saturation et perturbation), la puissance d'une centrale thermique (réponse inverse, analyse fréquentielle, régulateur P puis PI continu et discret) et un régulateur programmé échantillonné soumis à différentes perturbations.
 
-![Train feedback-control simulator](assets/simulateur_regulateur.png)
+![Simulateur Simulink du train avec son régulateur](assets/simulateur_regulateur.png)
 
-Academic work developed by Tedj El Moulk Sinacer and Sarah Dahmoun in the Instrumentation engineering programme at Sup Galilée, Université Sorbonne Paris Nord.
+## Vue d'ensemble
 
-The three studies connect physical modelling to controller design: derive the plant dynamics, analyse stability, tune feedback, then compare tracking, actuator demand and disturbance response in Simulink.
+- **Cadre** : TP de systèmes asservis, cycle ingénieur Instrumentation, Sup Galilée (Université Sorbonne Paris Nord), septembre–novembre 2024.
+- **Équipe** : binôme avec Sarah Dahmoun.
+- **État** : TP terminés. Les comptes rendus sont des versions de travail ; pas de compte rendu retrouvé pour le TP 3.
 
-## Model portfolio
+## Objectifs
 
-| Study | Physical system | Engineering focus | Models and parameters |
-|---|---|---|---|
-| TP1 | Train speed and travelled distance | First-order dynamics, proportional control, reference precompensation and actuator saturation | [Train models](models/tp1_suite_pilote_automatique/) |
-| TP2 | Thermal-power process | Nonminimum-phase dynamics, Bode/Nyquist/Nichols analysis, stability boundaries and continuous/discrete PI control | [Thermal models](models/tp2_centrale_thermique/) |
-| TP3 | Torpedo depth and pitch angle | Nonlinear kinematics, small-angle linearisation, two-feedback controller design, sampling and disturbances | [Depth-control model](models/tp3_regulation_programmee/) |
+1. Construire un simulateur Simulink à partir d'un modèle mathématique.
+2. Fermer la boucle avec un régulateur proportionnel, puis vérifier un cahier des charges (erreur, saturation, perturbation).
+3. Relier la réponse temporelle et la réponse fréquentielle d'un système.
+4. Régler un régulateur PI, puis le discrétiser.
+5. Étudier un régulateur programmé échantillonné face à des perturbations constantes, sinusoïdales et aléatoires.
 
-Original reports are preserved in [`docs/`](docs/). Block diagrams and simulation captures are in [`assets/`](assets/). The [source map](docs/SOURCE_MAP.md) connects the recovered Drive material to its repository location.
+## Architecture du système
 
-## Train model
+**TP 1 — pilote automatique d'un train**
 
-### Plant dynamics and position
+```mermaid
+flowchart LR
+ YR[Consigne yr = 100 km/h] --> S1((+/-))
+ S1 --> K[Gain k] --> A[Gain alpha] --> SAT[Saturation<br/>-50 / 100]
+ SAT --> S2((+))
+ W[Perturbation w] --> S2
+ S2 --> B[Gain beta] --> F["1 / (τ p + 1)"] --> Y[Vitesse y]
+ Y --> S1
+ Y --> C[1/60] --> I[Intégrateur] --> D[Distance d]
+```
 
-The train-speed model is a first-order plant:
+**TP 2 — centrale thermique**
 
-$$
-G(s)=\frac{Y(s)}{U(s)}=\frac{\beta}{\tau s+1}.
-$$
+Modèle donné par l'énoncé : `d + 60 ḋ = u`, `x + 120 ẋ = 2 d`, `y = 2 (x − d) − w`, avec `u` la commande du débit de combustible, `d` le débit, `x` le flux thermique, `y` la puissance électrique et `w` une perturbation.
 
-Here `y` is speed, `u` the actuator command, `beta = 4` the static gain and `to = 1.2` the time constant in the supplied parameter script. For positive `tau`, the plant pole is `-1/tau`. A sustained command of 15 therefore gives a steady speed of 60 in the undisturbed linear model; a finite pulse has a separate decay after the command returns to zero.
+Régulateur PI : `u = −k (e + (1/Ti) ∫ e dt)`, consigne `yr = 50`.
 
-The distance channel integrates speed after a `1/60` conversion. With speed in km/h and distance in km, that conversion corresponds to a simulation time base in minutes. Keep this time base consistent when comparing distance, time constants and speed profiles.
+![Schéma en boucle fermée](assets/tp2_schema_boucle_fermee.png)
 
-### Proportional control and precompensation
+**TP 3 — régulateur programmé échantillonné**
 
-The reference is precompensated **before** the feedback subtraction:
+![Régulateur programmé](assets/tp3_regulateur_programme.png)
 
-$$
-u_{\mathrm{calc}}=k(\alpha y_r-y),
-\qquad
-\alpha=1+\frac{1}{k\beta}.
-$$
+## Logiciel
 
-Without saturation or disturbance, the closed-loop transfer function is
+MATLAB / Simulink : blocs Step, Constant, Gain, Sum, Transfer Fcn, Integrator, Discrete-Time Integrator, Zero-Order Hold, Saturation, Sine Wave, Random Number, Uniform Random Number, MATLAB Function, Scope ; fonctions `tf` et LTI Viewer pour les lieux de Bode, Nyquist et Black.
 
-$$
-\frac{Y(s)}{Y_r(s)}
-=\frac{k\beta\alpha}{\tau s+1+k\beta}.
-$$
+## Implémentation
 
-The chosen `alpha` makes its DC gain equal to one. Increasing positive `k` reduces the linear closed-loop time constant to `tau/(1 + k*beta)`, while increasing the initial actuator demand.
+| Modèle | Contenu |
+|---|---|
+| `models/pilote_train_boucle_ouverte.slx` | Fonction de transfert `1/(to·p + 1)`, gains `beta`, `k`, `alpha` et `1/60`, saturation de la commande entre −50 et 100, consigne de 100, perturbation en échelon, intégrateur pour la distance |
+| `models/pilote_train_boucle_ouverte_corrige.slx` | Version corrigée du même modèle (différences non documentées) |
+| `models/tp1_suite_pilote_automatique/` | Suite du TP 1 : `pilote_automatique.slx`, `pilote_automatique_complet.slx`, `pilote_automatique_question_4.slx`, `parametres_tp1.m` |
+| `models/tp2_centrale_thermique/` | `boucle_ouverte.slx`, `boucle_fermee.slx`, `boucle_fermee_pi.slx`, `regulateur_pi_discret.slx`, `parametres_tp2.m` (`k = 0.285`, `Ti = 100`, `Te = 0.01`) |
+| `models/tp3_regulation_programmee/` | `tp3_schema.slx`, `parametres_tp3.m` : deux réglages commentés selon le temps de réponse visé (`t5 = 5 s` : `k1 = 9/(10π)`, `k2 = 2/10` ; `t5 = 2 s` : `k1 = 56.25/(10π)`, `k2 = 1/2`), `f = 0.001` Hz, `Te = 0.02` s (fe = 50 Hz) |
 
-The actuator limits are **−50 to 100**. The captures compare calculated and applied commands, making the effect of saturation visible alongside speed tracking. The supplied route profile uses workspace arrays `t` and `yr`; the parameter file also defines `k = 10`, `Kd = 0.0001` and `Te = 0.2` for the study variants.
+Pour le TP 1, le compte rendu donne `β = 4`.
 
-The recovered [proportional-control model](models/tp1_suite_pilote_automatique/pilote_proportionnel_archive.slx) contains reference precompensation, feedback, saturation and a disturbance input. Its original archive filename was `boucle_ouverte.slx`, although its block connections form a closed loop. The repository name reflects the actual model.
+## Principes d'ingénierie
 
-Read the [train report](docs/tp1_pilote_automatique_train.docx) together with the [command-saturation capture](assets/commande_avec_saturation.png).
+- **Premier ordre** : `F(p) = β / (τ p + 1)`, stable car le pôle `−1/τ` est négatif ; gain statique `F(0) = β`.
+- **Régulateur proportionnel** avec précompensation `α` pour un gain statique unitaire en boucle fermée.
+- **Saturation de la commande** : comparaison entre commande calculée et commande appliquée.
+- **Système à réponse inverse** (TP 2) : la puissance commence par diminuer avant de rejoindre sa valeur finale.
+- **Stabilité en boucle fermée selon le gain** (TP 2) : convergence, oscillations puis divergence quand `k` augmente.
+- **Action intégrale** : annulation de l'erreur statique, y compris en présence de perturbation.
+- **Discrétisation** : bloqueur d'ordre zéro, intégrateur discret, influence de la période d'échantillonnage.
 
-## Thermal model and PI control
+## Résultats
 
-### Physical equations and inverse response
+Valeurs relevées dans les comptes rendus (TP 1 et 2) et dans les titres des captures (TP 3) :
 
-The process is described by
-
-$$
-d+60\dot d=u,\qquad
-x+120\dot x=2d,\qquad
-y=2(x-d)-w,
-$$
-
-where `u` is the fuel-flow command, `d` and `x` are intermediate process variables, `y` is the controlled output and `w` is an additive output disturbance. With `w = 0`:
-
-$$
-G(s)=\frac{2(1-120s)}{(1+60s)(1+120s)}
-=\frac{-240s+2}{7200s^2+180s+1}.
-$$
-
-The poles are `-1/60` and `-1/120`: **the open-loop plant is stable**. Its zero at `+1/120` lies in the right half-plane, making it **nonminimum phase**. This explains the initial movement opposite to the final response and constrains how aggressively feedback can be tuned.
-
-![Thermal-process internal-variable model](assets/tp2_archive/process_model.png)
-
-### Proportional stability boundary
-
-For negative feedback with `e = yr - y` and `u = k*e`, the characteristic polynomial is
-
-$$
-7200s^2+(180-240k)s+(1+2k).
-$$
-
-For positive gain, asymptotic stability requires **`0 < k < 0.75`**. At `k = 0.75`, the ideal linear model reaches the oscillatory boundary; `k = 1` produces an unstable closed loop. These cases are illustrated by the stored response captures.
-
-The report also uses reference precompensation `alpha = 1 + 1/(2*k)`. It corrects nominal reference gain but does not provide integral rejection of a constant disturbance.
-
-### PI design and sampled implementation
-
-For
-
-$$
-C(s)=k\left(1+\frac{1}{T_i s}\right),
-$$
-
-the characteristic polynomial becomes
-
-$$
-7200s^3+(180-240k)s^2+
-\left(1+2k-\frac{240k}{T_i}\right)s+
-\frac{2k}{T_i}.
-$$
-
-Applying the Routh criterion gives, for `0 < k < 0.75`,
-
-$$
-T_i>
-\frac{240k}{1+2k}
-\left(1+\frac{60}{180-240k}\right).
-$$
-
-At the supplied gain `k = 0.285`, the lower bound is approximately **66.99 s**. The selected `Ti = 100 s` satisfies this continuous-time stability condition. The discrete PI study uses `Te = 0.01 s`.
-
-![Discrete PI block diagram](assets/tp2_schema_pi_discret.png)
-
-The parameter script converts angular frequency to ordinary frequency using `f = omega/(2*pi)`. For `omega = 0.02 rad/s`, this is approximately `0.003183 Hz`. Use `omega` with analyses expressed in rad/s and `f` with blocks explicitly configured in Hz.
-
-The [thermal PDF report](docs/tp2_centrale_thermique.pdf) and recovered [full Word report](docs/tp2_thermal_control_full_report.docx) contain the step-response, frequency-domain and feedback analyses. The [PI report](docs/tp2_regulateur_pi_compte_rendu.docx) and [PI response](assets/tp2_pi_k0_285_ti100.png) cover controller tuning and disturbance response.
-
-## Torpedo depth control
-
-### Nonlinear plant and feedback law
-
-TP3 studies a torpedo travelling at constant forward speed. Its pitch angle `theta` is expressed in degrees:
-
-$$
-\dot\theta=10u+v,
-\qquad
-\dot y=20\sin\left(\frac{\pi}{180}\theta\right).
-$$
-
-The command `u` acts on pitch dynamics; `v` is injected into the **pitch-rate equation**. The controller combines depth error and pitch-angle feedback:
-
-$$
-u=-k_1(y-y_r)-k_2\theta.
-$$
-
-Depth feedback drives the output toward its reference, while pitch feedback supplies damping.
-
-![Torpedo depth-control study with sinusoidal disturbance](assets/tp3_schema_perturbation_cos.png)
-
-### Small-angle design and gain selection
-
-Near `theta = 0`, the approximation `sin(theta*pi/180) ≈ theta*pi/180` gives
-
-$$
-\dot y\approx\frac{\pi}{9}\theta,
-\qquad
-p(s)=s^2+10k_2s+\frac{10\pi}{9}k_1.
-$$
-
-Matching this polynomial to `s² + 2*zeta*omega_n*s + omega_n²` gives a direct connection between gains, natural frequency and damping.
-
-| Gain set | `k1` | `k2` | Linearised `omega_n` | `zeta` | Reported 5% settling target |
-|---|---|---|---|---|---|
-| Slower response | `9/(10*pi)` ≈ 0.28648 | `0.2` | 1 rad/s | 1 | 5 s |
-| Faster response | `56.25/(10*pi)` ≈ 1.79049 | `0.5` | 2.5 rad/s | 1 | 2 s |
-
-The **faster gains are active** in `parametres_tp3.m`; the slower pair is commented. The report compares these choices for a depth reference of 20 and examines their actuator demand.
-
-### Saturation, sampling and disturbances
-
-The report extends the continuous controller to command limits of **±10**, sample-and-hold behaviour and constant, sinusoidal and random disturbances. The parameter script sets `Te = 0.02 s`, corresponding to **50 Hz**, and `f = 0.001 Hz` for a sinusoidal study. Larger sampling periods introduce more visible differences from the continuous response.
-
-The saved `tp3_schema.slx` is the **continuous nonlinear model**, with the current reference block set to `yr = 0` and the disturbance block to `v = 5`. The [sampled-controller diagram](assets/tp3_schema_avec_z.png) and [command-comparison diagram](assets/tp3_schema_u_calculee_appliquee.png) show the additional configurations studied in the report.
-
-For the linearised model, the disturbance-to-depth transfer function is
-
-$$
-\frac{Y(s)}{V(s)}
-=\frac{\pi/9}{s^2+10k_2s+(10\pi/9)k_1}.
-$$
-
-A constant pitch-rate disturbance therefore produces a finite steady depth offset `v/(10*k1)`. The controller has no integral term; its damping and frequency attenuation should be interpreted separately from elimination of a constant bias.
-
-The recovered [TP3 report](docs/tp3_torpedo_depth_control.docx) supplies the physical equations, gain-design steps and simulation discussion.
-
-## Reported simulation observations
-
-| Study | Configuration | Observation in the archived material |
+| TP | Essai | Résultat |
 |---|---|---|
-| Train | Reference 100 km/h, proportional feedback and precompensation | Nominal speed tracking with calculated/applied command comparison |
-| Thermal plant | Sustained input `u = 25`, `w = 0` | Initial decrease near −17, then convergence toward 50 |
-| Thermal P control | `k = 0.5 / 0.75 / 1` | Convergent / oscillatory-boundary / divergent responses |
-| Thermal PI | `k = 0.285`, `Ti = 100 s`, disturbance `w = 50` | Return toward `y = 50`, with steady command near 50 |
-| Torpedo | Two critically damped linearised gain sets | Comparison of 5 s and 2 s settling targets |
-| Torpedo variants | Saturation, sampling and disturbances | Comparison of depth, calculated command and applied command |
+| 1 | Boucle ouverte, `u = 15` pendant 10 s | Vitesse qui tend vers 60 km/h (`β × u`) |
+| 1 | Boucle fermée, `yr = 100 km/h` | La vitesse converge vers 100 km/h quel que soit `k` |
+| 1 | Cahier des charges | Respecté tant que `k` ne dépasse pas 20 |
+| 2 | Échelon `u = 25` | Puissance qui descend d'abord jusqu'à −17 puis se stabilise à 50 |
+| 2 | Temps de réponse | 530 s à 5 %, 445 s à 10 %, 355 s à 20 % |
+| 2 | Sinusoïde de période 10 s | Amplitude ≈ 0,05 pour `ε = 1`, déphasage mesuré 92° pour 93° attendus |
+| 2 | Régulateur P | Converge pour `k = 0.5`, oscille pour `k = 0.75`, diverge pour `k = 1` |
+| 2 | PI `k = 0.285`, `Ti = 100` | 1220 s pour atteindre la bande de 10 % (y = 55) ; commande avec un pic ≈ 45 puis stabilisée à 25 |
+| 2 | PI avec perturbation `w = 50` | `y → 50`, `u → 50`, erreur `e → 0` |
+| 2 | PI discret (`Te = 0.01`) | La sortie converge vers 50 |
+| 3 | Réglages `t5 = 5 s` et `t5 = 2 s` | Captures de `y(t)` et `u(t)` |
+| 3 | Perturbation `v(t)` constante (5), sinusoïdale, aléatoire puis uniforme | Captures de `y(t)` et `u(t)` |
+| 3 | Commande calculée / commande appliquée | Oscillation de `y(t)` attribuée au dépassement de la commande |
+| 3 | `Te = 0.05` s, ajout d'une seconde entrée `z(t)` | Captures |
 
-These are simulation-study observations from the linked reports and captures. Each response is associated with its input, gain set and model configuration.
+| P, k = 0,5 | P, k = 0,75 | P, k = 1 |
+|---|---|---|
+| ![](assets/tp2_sortie_k0_5_converge.png) | ![](assets/tp2_sortie_k0_75_oscillations.png) | ![](assets/tp2_sortie_k1_diverge.png) |
 
-## Reproducing a model
+| PI continu | Schéma PI discret | PI discret |
+|---|---|---|
+| ![](assets/tp2_pi_k0_285_ti100.png) | ![](assets/tp2_schema_pi_discret.png) | ![](assets/tp2_pi_discret_sortie_y.png) |
 
-MATLAB and Simulink are required. Transfer-function construction and frequency-response analysis also use Control System Toolbox.
+| TP 3 — perturbation aléatoire | TP 3 — dépassement de commande |
+|---|---|
+| ![](assets/tp3_y_u_bruit_uniforme.png) | ![](assets/tp3_oscillation_depassement_commande.png) |
 
-```bash
-git clone https://github.com/tedjelmoulksn-dotcom/Systemes_Asservis.git
-cd Systemes_Asservis
+## Difficultés et limites
+
+- Comptes rendus non relus : fautes de frappe, et une question laissée sans réponse (valeur finale de la distance au TP 1).
+- La seconde mesure fréquentielle du TP 2 (période 100π s) n'est pas faite.
+- TP 3 : pas de compte rendu ; l'interprétation se limite aux titres des captures. Le rôle exact de `z(t)` est **à documenter**.
+- Simulations non rejouées lors de la rédaction de ce README.
+
+## Structure du dépôt
+
+```
+models/   Modèles Simulink (TP 1, TP 1 suite, TP 2, TP 3) et scripts de paramètres
+assets/   Captures des schémas et des courbes (préfixes tp2_ et tp3_)
+docs/     Comptes rendus (TP 1 .docx, TP 2 PDF, TP 2 régulateur PI .docx)
 ```
 
-Start MATLAB in the repository root. Initialise the relevant workspace **before** opening a model:
+## Exécution
 
-```matlab
-repoRoot = pwd;
+Dans MATLAB : lancer le script de paramètres du TP (`parametres_tp1.m`, `parametres_tp2.m` ou `parametres_tp3.m`), ouvrir le modèle `.slx` correspondant, lancer la simulation et ouvrir les Scopes.
 
-% TP1: recovered proportional train controller
-run(fullfile(repoRoot, 'models', 'tp1_suite_pilote_automatique', 'parametres_tp1.m'));
-open_system(fullfile(repoRoot, 'models', 'tp1_suite_pilote_automatique', ...
-    'pilote_proportionnel_archive.slx'));
+## Compétences démontrées
 
-% TP2: continuous PI controller
-run(fullfile(repoRoot, 'models', 'tp2_centrale_thermique', 'parametres_tp2.m'));
-open_system(fullfile(repoRoot, 'models', 'tp2_centrale_thermique', ...
-    'boucle_fermee_pi.slx'));
-
-% TP3: continuous nonlinear depth-control model
-run(fullfile(repoRoot, 'models', 'tp3_regulation_programmee', 'parametres_tp3.m'));
-open_system(fullfile(repoRoot, 'models', 'tp3_regulation_programmee', ...
-    'tp3_schema.slx'));
-```
-
-Run each study separately so workspace variables correspond to the selected model. Use the model's existing solver and stop-time settings as the starting configuration. For a TP3 tracking experiment, set its reference block to the report's `yr = 20` and choose the disturbance input for that experiment.
-
-For the thermal frequency analysis:
-
-```matlab
-Gthermal = tf(2*[-120 1], [7200 180 1]);
-pole(Gthermal)
-zero(Gthermal)
-figure; bode(Gthermal); grid on;
-figure; nyquist(Gthermal); grid on;
-figure; nichols(Gthermal); grid on;
-```
-
-## Engineering review
-
-The portfolio demonstrates the progression from a first-order speed plant to an inverse-response thermal process and a nonlinear depth-control model. The common method is to derive the dynamics, establish the controller's stability conditions, choose gains from the desired response, then examine tracking and command effort together.
-
-The train study highlights the trade-off between faster linear tracking and actuator saturation. The thermal study shows why a stable plant can become unstable under excessive feedback gain and how PI tuning depends on the plant's right-half-plane zero. The torpedo study connects physical angle units, linearisation, damping and sampling to the observed depth response.
+- Modélisation par fonction de transfert et schéma-bloc.
+- Simulation Simulink : saturation, perturbations (constante, sinusoïdale, aléatoire), régulateurs P, PI et programmé.
+- Analyse temporelle et fréquentielle (Bode, Nyquist, Black), stabilité selon le gain.
+- Discrétisation d'un correcteur et choix de la période d'échantillonnage.
 
 ## Licence
 
-No project-wide licence has been defined.
+Aucune licence n'a été définie.
