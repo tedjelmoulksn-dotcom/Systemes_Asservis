@@ -2,6 +2,10 @@
 
 MATLAB and Simulink studies of train speed, thermal regulation and torpedo depth control. The repository combines plant models, controller experiments, parameter scripts and laboratory reports.
 
+![Systemes Asservis project overview](assets/tp2_schema_boucle_fermee.png)
+
+*Original Simulink feedback-loop model from the controller laboratory.*
+
 ## Studies
 
 | Study | Implementation | Analysis |
