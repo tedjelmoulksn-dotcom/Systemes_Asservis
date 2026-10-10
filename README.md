@@ -1,22 +1,27 @@
-# Control Systems with MATLAB and Simulink
+# Feedback Control Systems
 
-Three control studies: train-speed regulation, thermal-plant power control and sampled torpedo-depth control. Models compare open and closed loops, P/PI controllers, saturation and disturbance rejection.
+MATLAB and Simulink studies of train speed, thermal regulation and torpedo depth control. The repository combines plant models, controller experiments, parameter scripts and laboratory reports.
 
-![Project illustration](assets/simulateur_regulateur.png)
+## Studies
+
+| Study | Implementation | Analysis |
+| --- | --- | --- |
+| Train speed | Automatic-pilot models and proportional-control variants | Tracking and response to load or slope changes |
+| Thermal regulation | Open-loop models, continuous PI and discrete PI variants | Temperature response and controller comparison |
+| Torpedo depth | Dynamic model and parameter script | Depth-control behaviour and system response |
 
 ## Repository guide
 
-| Location | Contents |
-|---|---|
-| [models/](models/) | Organised Simulink models, parameter scripts and input data |
-| [docs/](docs/) | Reports and source mapping |
-| [assets/](assets/) | Block diagrams and response plots |
-| [archive/](archive/) | Original lab models and source variants |
+- [models](models/): working Simulink models, MATLAB parameters and input MAT files.
+- [docs](docs/): train report, thermal handout, PI report, complete thermal report and torpedo-depth report.
+- [assets](assets/): model diagrams and simulation captures.
+- [archive](archive/): original project variants and historical material.
+- [Source map](docs/SOURCE_MAP.md): correspondence between imported documents and studies.
 
-## Getting started
+## Run a simulation
 
-In MATLAB, run the parameter script for the selected study before opening its `.slx` model. The study folders are `tp1_suite_pilote_automatique`, `tp2_centrale_thermique` and `tp3_regulation_programmee`, under `models/`. Required MATLAB/Simulink toolboxes depend on the selected model.
+Use MATLAB with Simulink. Start from the study's model folder and execute its parameter script before opening the corresponding model. Keep associated MAT files on the MATLAB path when the model loads external inputs.
 
-## Project context
+Select the controller variant explicitly when comparing results. Continuous and discrete models can use different timing assumptions; the torpedo parameter script defines a sampling period of `0.02 s`.
 
-Coursework with Sarah Dahmoun at Sup Galilée. Reports provide the detailed calculations and observations; the README serves as a short guide to the studies.
+The reports explain the experimental reasoning and plots. Archived screenshots are historical results; simulations have not been rerun during documentation cleanup.
